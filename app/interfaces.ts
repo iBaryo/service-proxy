@@ -13,7 +13,11 @@ export interface IProxyError extends IProxyMessage {
     err: string;
 }
 
-export const enum ProxySignals {
+export interface IProxySignalMessage extends IProxyMessage {
+    signal : ProxySignal;
+}
+
+export const enum ProxySignal {
     Listening = 900,
     StopListening
 }

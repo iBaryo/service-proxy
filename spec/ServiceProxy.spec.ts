@@ -1,9 +1,11 @@
 import {ServiceProxy} from "../app/ServiceProxy";
 import {Async} from "./utils";
-import {ProxySignals, IProxyRequest} from "../app/interfaces";
+import {ProxySignal, IProxyRequest} from "../app/interfaces";
 
 describe('ServiceProxy', () => {
     const mockUrl = 'mockUrl.com';
+    const mockId = 'mockId';
+
 
     let mockIFrameCreator;
     let mockIFrame;
@@ -29,15 +31,20 @@ describe('ServiceProxy', () => {
             clearTimeout: jasmine.createSpy('win-clear-timeout')
         };
 
-        proxy = new ServiceProxy(mockUrl, undefined, mockIFrameCreator, mockIFrameHost, mockWindow);
+        const mockIdCreator = () => mockId;
+
+        proxy = new ServiceProxy(mockUrl, 5000, mockIdCreator, mockIFrameCreator, mockIFrameHost, mockWindow);
     });
 
     it('should initialize', () => expect(proxy).toBeTruthy());
 
     describe('methods', () => {
         let initPromise: Promise<void>;
+        let respondToInit: (e: MessageEvent) => Promise<void>;
+
         beforeEach(() => {
             initPromise = proxy.init();
+            respondToInit = mockWindow.addEventListener.calls.mostRecent().args[1];
         });
 
         describe('init', () => {
@@ -51,16 +58,13 @@ describe('ServiceProxy', () => {
                 expect(mockWindow.addEventListener).toHaveBeenCalledWith('message', jasmine.any(Function), true);
             });
             describe('responses from iframe', () => {
-                let respondToInit: (e: MessageEvent) => Promise<void>;
-                beforeEach(() => {
-                    respondToInit = mockWindow.addEventListener.calls.mostRecent().args[1];
-                });
+
 
                 it('should ignore messages from other domains', Async(async() => {
                     initPromise.then(fail);
                     await respondToInit({
                         origin: 'not-origin.com',
-                        data: ProxySignals.Listening
+                        data: ProxySignal.Listening
                     } as MessageEvent);
 
                     expect(mockWindow.clearTimeout).not.toHaveBeenCalled();
@@ -79,7 +83,7 @@ describe('ServiceProxy', () => {
                 it('should finish only when receiving response from iframe', Async(async() => {
                     await respondToInit({
                         origin: mockUrl,
-                        data: ProxySignals.Listening
+                        data: ProxySignal.Listening
                     } as MessageEvent);
 
                     await initPromise;
@@ -87,7 +91,7 @@ describe('ServiceProxy', () => {
                 it('should clean stuff when resolving', Async(async() => {
                     await respondToInit({
                         origin: mockUrl,
-                        data: ProxySignals.Listening
+                        data: ProxySignal.Listening
                     } as MessageEvent);
 
                     await initPromise;
@@ -104,16 +108,19 @@ describe('ServiceProxy', () => {
                         fail();
                     }
                     catch (e) {
-                        expect(e).toBe('proxy timeout');
+                        expect(e).toBe('proxy init timeout');
                     }
                 }));
             });
         });
 
         describe('sendRequest', () => {
-            let mockId : string;
-
             beforeEach(Async(async() => {
+                await respondToInit({
+                    origin: mockUrl,
+                    data: ProxySignal.Listening
+                } as MessageEvent);
+
                 await initPromise;
             }));
 
@@ -122,22 +129,75 @@ describe('ServiceProxy', () => {
                 proxy.sendRequest(methodName);
                 expect(mockIFrame.contentWindow.postMessage).toHaveBeenCalledWith({
                     id: mockId,
-                    methodName
-                } as IProxyRequest);
+                    methodName,
+                    params: undefined
+                } as IProxyRequest, mockUrl);
             });
+
             xit('should resolve when gotten a response', Async(async() => {
             }));
             xit('should throw if did not get response after timeout', () => {
             });
+            xit('should handle multiple requests with different responses order', Async(async() => {
+            }));
         });
 
         describe('wrapWith', () => {
-            xit('should return an object from the input class', () => {
+            beforeEach(() => {
+                spyOn(proxy, 'sendRequest');
             });
-            xit('should return an object with all methods as proxy to "sendRequest" method', () => {
+
+            interface IMockWrapper {
+                mockMethod(): void;
+                mockMethodWithParams(param1, param2): void;
+            }
+
+            function testWrapper(wrapper: IMockWrapper) {
+                wrapper.mockMethod();
+                expect(proxy.sendRequest).toHaveBeenCalledWith('mockMethod', []);
+
+                (proxy.sendRequest as jasmine.Spy).calls.reset();
+
+                const param1 = {}, param2 = {};
+                wrapper.mockMethodWithParams(param1, param2);
+                expect(proxy.sendRequest).toHaveBeenCalledWith('mockMethodWithParams', [param1, param2]);
+            }
+
+            it('should return a proxy wrapper according to string array', () => {
+                testWrapper(proxy.wrapWith<IMockWrapper>(['mockMethod', 'mockMethodWithParams']));
+            });
+
+            it('should return a proxy wrapper according to object', () => {
+                testWrapper(proxy.wrapWith<IMockWrapper>({
+                    mockMethod: () => {
+                    },
+                    mockMethodWithParams: () => {
+                    }
+                }));
+            });
+
+            it('should return a proxy wrapper according to class ctor', () => {
+                class Mock {
+                    public mockProp = 42;
+
+                    constructor() {
+                    }
+
+                    public mockMethod() {
+                    }
+                }
+
+                class MockExtended extends Mock implements IMockWrapper {
+                    public mockMethodWithParams(param1, param2) {
+
+                    }
+                }
+
+                const wrapper = proxy.wrapWith(MockExtended);
+                expect(wrapper.mockProp).toBeUndefined();
+
+                testWrapper(wrapper);
             });
         });
     });
-
-
 });

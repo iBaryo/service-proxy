@@ -1,5 +1,5 @@
 import {ProxyListener} from "../app/ProxyListener";
-import {ProxySignals, IProxyRequest, IProxyResponse} from "../app/interfaces";
+import {ProxySignal, IProxyRequest, IProxyResponse} from "../app/interfaces";
 import {IProxyError} from "../app/interfaces";
 import {Async, resetSpies} from "./utils";
 
@@ -35,7 +35,7 @@ describe('ProxyListener', () => {
             listener.listen();
 
             expect(mockWindow.addEventListener).toHaveBeenCalledWith('message', jasmine.any(Function), true);
-            expect(mockTarget.postMessage).toHaveBeenCalledWith(ProxySignals.Listening, mockOrigin);
+            expect(mockTarget.postMessage).toHaveBeenCalledWith(ProxySignal.Listening, mockOrigin);
             expect(listener.isListening).toBeTruthy();
         });
 
@@ -57,7 +57,7 @@ describe('ProxyListener', () => {
 
             const eventListener = mockWindow.addEventListener.calls.mostRecent().args[1];
             expect(mockWindow.removeEventListener).toHaveBeenCalledWith('message', eventListener, true);
-            expect(mockTarget.postMessage).toHaveBeenCalledWith(ProxySignals.StopListening, mockOrigin);
+            expect(mockTarget.postMessage).toHaveBeenCalledWith(ProxySignal.StopListening, mockOrigin);
             expect(listener.isListening).toBeFalsy();
         });
         it('should not do anything if not listening', () => {

@@ -1,9 +1,10 @@
 import {generateId, validateOrigin} from "./utils";
-import {ProxySignals, IProxyRequest, IProxyResponse} from "./interfaces";
+import {ProxySignal, IProxyRequest, IProxyResponse, IProxyMessage} from "./interfaces";
+import {getAllClassMethodsNames} from "./utils";
 
 export class ServiceProxy {
     private _iframe: HTMLIFrameElement;
-    private _pendingReqs : ((e : MessageEvent & {data: IProxyResponse})=>void)[] = [];
+    private _pendingReqs: ((e: MessageEvent & {data: IProxyResponse})=>void)[] = [];
 
     constructor(public readonly url: string,
                 public readonly timeout = 5000,
@@ -17,45 +18,58 @@ export class ServiceProxy {
         this._iframe = this._iframeCreator();
         this._iframe.src = this.url;
         this._iframeHost.appendChild(this._iframe);
+        this._win.addEventListener('message', this.onResponse, true);
 
         return new Promise<void>((resolve, reject) => {
-            const timeoutId = this._win.setTimeout(() => reject('proxy timeout'), this.timeout);
+            // todo: i don't really like this - should refactor
+            const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
             const onInitResponse = (e: MessageEvent) => {
                 if (validateOrigin(this.url, e.origin)
-                    && e.data === ProxySignals.Listening) {
+                    && e.data === ProxySignal.Listening) {
                     this._win.clearTimeout(timeoutId);
                     this._win.removeEventListener('message', onInitResponse, true);
+                    this._win.addEventListener('message', this.onResponse, true);
                     resolve();
                 }
             };
+
             this._win.addEventListener('message', onInitResponse, true);
         });
     }
 
-    public sendRequest<T>(methodName: string, params?: any[]): Promise<T> {
-        return new Promise<T>((resolve, reject) => {
-            const req = {
-                id: this._idCreator(),
-                methodName,
-                params
-            } as IProxyRequest;
+    private onResponse = (e: MessageEvent & {data: IProxyResponse}) => { // arrow function to preserve context
+        const msg = e.data;
+        if (validateOrigin(this.url, e.origin) && msg && this._pendingReqs[msg.id]) {
+            this._pendingReqs[msg.id](msg);
+            delete this._pendingReqs[msg.id];
+        }
+    };
 
+    private postToIFrame(req: IProxyMessage) {
+        const onMsgResponse = this.registerMessage(req);
+        this._iframe.contentWindow.postMessage(req, this.url);
+        return onMsgResponse;
+    }
+
+    private registerMessage(req: IProxyMessage, timeout = this.timeout) {
+        return new Promise<IProxyResponse>((resolve, reject) => {
             const timeoutId = this._win.setTimeout(() => {
                 reject('proxy request timeout');
-            }, this.timeout);
+            }, timeout);
 
-            const onResponse = (e: MessageEvent & {data : IProxyResponse}) => {
-                if (validateOrigin(this.url, e.origin)
-                    && e.data && e.data.id) {
-
-                    this._win.clearTimeout(timeoutId);
-                    this._win.removeEventListener('message', onResponse, true);
-                    resolve(e.data.res)
-                }
+            this._pendingReqs[req.id] = (e: IProxyResponse) => {
+                this._win.clearTimeout(timeoutId);
+                resolve(e);
             };
-            this._win.addEventListener('message', onResponse, true);
-            this._iframe.contentWindow.postMessage(req, this.url);
         });
+    }
+
+    public sendRequest<T>(methodName: string, params?: any[]): Promise<T> {
+        return this.postToIFrame({
+            id: this._idCreator(),
+            methodName,
+            params
+        } as IProxyRequest).then(msg => msg.res);
     }
 
     public stop() {
@@ -69,19 +83,15 @@ export class ServiceProxy {
     public wrapWith<T>(type: (new() => T)|Object|string[]): T {
         let keys: string[];
         if (typeof type === 'function')
-            keys = Object.keys(type.prototype).filter(key => typeof(type.prototype[key]) === 'function'); // todo: won't work in es6
+            keys = getAllClassMethodsNames(type);
         else if (type instanceof Array)
             keys = type;
         else if (typeof type === 'object')
-            keys = Object.keys(type);
+            keys = Object.keys(type);//.concat(getAllClassMethodsNames(Object.getPrototypeOf(type)));
         else
-            throw 'unsupported type for proxy';
+            throw 'unsupported type for wrapper';
 
         return this.proxyFromKeys<T>(keys);
-    }
-
-    private wrapFromConstructor<T>(ctor: new()=>T): T {
-        return undefined;
     }
 
     private proxyFromKeys<T>(keys: string[]): T {

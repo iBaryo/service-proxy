@@ -1,6 +1,6 @@
 import {IProxyRequest, IProxyResponse, IProxyError} from "./interfaces";
 import {getParentUrl,validateOrigin} from "./utils";
-import {ProxySignals} from "./interfaces";
+import {ProxySignal} from "./interfaces";
 
 export class ProxyListener<T> {
     constructor(private readonly _service: T,
@@ -18,7 +18,7 @@ export class ProxyListener<T> {
     public listen() {
         if (!this._listening) {
             this._win.addEventListener('message', this.onRequest, true);
-            this.postMessage(ProxySignals.Listening);
+            this.postMessage(ProxySignal.Listening);
             this._listening = true;
         }
     }
@@ -26,7 +26,7 @@ export class ProxyListener<T> {
     public stopListen() {
         if (this._listening) {
             this._win.removeEventListener('message', this.onRequest, true);
-            this.postMessage(ProxySignals.StopListening);
+            this.postMessage(ProxySignal.StopListening);
             this._listening = false;
         }
     }
