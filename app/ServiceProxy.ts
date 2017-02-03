@@ -53,6 +53,7 @@ export class ServiceProxy {
 
     private registerMessage(req: IProxyMessage, timeout = this.timeout) {
         return new Promise<IProxyResponse>((resolve, reject) => {
+
             const timeoutId = this._win.setTimeout(() => {
                 reject('proxy request timeout');
             }, timeout);
@@ -74,6 +75,7 @@ export class ServiceProxy {
 
     public stop() {
         // todo: add notifying the listener
+        this._win.removeEventListener('message', this.onResponse, true);
         this._iframeHost.removeChild(this._iframe);
     }
 

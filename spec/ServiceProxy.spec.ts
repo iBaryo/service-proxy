@@ -1,12 +1,12 @@
 import {ServiceProxy} from "../app/ServiceProxy";
 import {Async} from "./utils";
-import {ProxySignal, IProxyRequest} from "../app/interfaces";
+import {ProxySignal, IProxyRequest, IProxyResponse} from "../app/interfaces";
 
 describe('ServiceProxy', () => {
     const mockUrl = 'mockUrl.com';
-    const mockId = 'mockId';
+    const mockTimeoutId = 123;
 
-
+    let mockId;
     let mockIFrameCreator;
     let mockIFrame;
     let mockIFrameHost;
@@ -27,13 +27,14 @@ describe('ServiceProxy', () => {
         mockWindow = {
             addEventListener: jasmine.createSpy('win-add-event-listener'),
             removeEventListener: jasmine.createSpy('win-remove-event-listener'),
-            setTimeout: jasmine.createSpy('win-set-timeout'),
+            setTimeout: jasmine.createSpy('win-set-timeout').and.returnValue(mockTimeoutId),
             clearTimeout: jasmine.createSpy('win-clear-timeout')
         };
 
-        const mockIdCreator = () => mockId;
+        mockId = 0;
+        const mockIdCreator = () => String(++mockId);
 
-        proxy = new ServiceProxy(mockUrl, 5000, mockIdCreator, mockIFrameCreator, mockIFrameHost, mockWindow);
+        proxy = new ServiceProxy(mockUrl, jasmine.DEFAULT_TIMEOUT_INTERVAL / 5, mockIdCreator, mockIFrameCreator, mockIFrameHost, mockWindow);
     });
 
     it('should initialize', () => expect(proxy).toBeTruthy());
@@ -115,31 +116,120 @@ describe('ServiceProxy', () => {
         });
 
         describe('sendRequest', () => {
+            const methodName = 'mock';
+            let respondToRequest: (e: MessageEvent) => void;
             beforeEach(Async(async() => {
+                mockWindow.addEventListener.calls.reset();
                 await respondToInit({
                     origin: mockUrl,
                     data: ProxySignal.Listening
                 } as MessageEvent);
 
                 await initPromise;
+                mockWindow.clearTimeout.calls.reset();
+
+                respondToRequest = mockWindow.addEventListener.calls.mostRecent().args[1];
             }));
 
             it('should post message to the iframe', () => {
-                const methodName = 'mock';
                 proxy.sendRequest(methodName);
                 expect(mockIFrame.contentWindow.postMessage).toHaveBeenCalledWith({
-                    id: mockId,
+                    id: String(mockId),
                     methodName,
                     params: undefined
                 } as IProxyRequest, mockUrl);
             });
 
-            xit('should resolve when gotten a response', Async(async() => {
-            }));
-            xit('should throw if did not get response after timeout', () => {
+            describe('when getting a response', () => {
+                let pendingReq: Promise<string>;
+                let proxyReq: IProxyRequest;
+                let mockProxyRes: IProxyResponse;
+                let reqTimeout: ()=>void;
+                beforeEach(() => {
+                    pendingReq = proxy.sendRequest<string>(methodName);
+                    proxyReq = mockIFrame.contentWindow.postMessage.calls.mostRecent().args[0];
+                    mockProxyRes = {
+                        id: proxyReq.id,
+                        res: 'ok'
+                    };
+                    reqTimeout = mockWindow.setTimeout.calls.mostRecent().args[0];
+                });
+
+                it('should reject if did not get response after timeout', Async(async() => {
+                    try {
+                        reqTimeout();
+                        await pendingReq;
+                        fail();
+                    }
+                    catch (e) {
+                        expect(e).toBe('proxy request timeout');
+                    }
+                }));
+
+
+                it('should ignore response if came from a different origin', Async(async() => {
+                    respondToRequest({
+                        origin: 'not-origin.com',
+                        data: mockProxyRes
+                    } as MessageEvent);
+
+                    expect(mockWindow.clearTimeout).not.toHaveBeenCalled();
+
+                    try {
+                        reqTimeout();
+                        await pendingReq;
+                        fail();
+                    }
+                    catch (e) {
+
+                    }
+                }));
+                it('should resolve when gotten a response', Async(async() => {
+                    respondToRequest({
+                        origin: mockUrl,
+                        data: mockProxyRes
+                    } as MessageEvent);
+
+                    const result = await pendingReq;
+                    expect(result).toBe(mockProxyRes.res);
+                }));
+
+                it('should handle multiple requests with different responses order', Async(async() => {
+                    // Arrange
+                    const pendingReq2 = proxy.sendRequest(methodName);
+                    const proxyReq2 = mockIFrame.contentWindow.postMessage.calls.mostRecent().args[0];
+                    const mockProxyRes2 = {
+                        id: proxyReq2.id,
+                        res: 'ok2'
+                    };
+
+                    const pendingReq3 = proxy.sendRequest(methodName);
+                    const proxyReq3 = mockIFrame.contentWindow.postMessage.calls.mostRecent().args[0];
+                    const mockProxyRes3 = {
+                        id: proxyReq3.id,
+                        res: 'ok3'
+                    };
+
+                    // Act
+                    respondToRequest({
+                        origin: mockUrl,
+                        data: mockProxyRes3
+                    } as MessageEvent);
+                    respondToRequest({
+                        origin: mockUrl,
+                        data: mockProxyRes2
+                    } as MessageEvent);
+                    respondToRequest({
+                        origin: mockUrl,
+                        data: mockProxyRes
+                    } as MessageEvent);
+
+                    // Assert
+                    expect(await pendingReq).toBe(mockProxyRes.res);
+                    expect(await pendingReq2).toBe(mockProxyRes2.res);
+                    expect(await pendingReq3).toBe(mockProxyRes3.res);
+                }));
             });
-            xit('should handle multiple requests with different responses order', Async(async() => {
-            }));
         });
 
         describe('wrapWith', () => {
