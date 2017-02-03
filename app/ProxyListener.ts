@@ -2,8 +2,8 @@ import {IProxyRequest, IProxyResponse, IProxyError} from "./interfaces";
 import {getParentUrl,validateOrigin} from "./utils";
 import {ProxySignal} from "./interfaces";
 
-export class ProxyListener<T> {
-    constructor(private readonly _service: T,
+export class ProxyListener {
+    constructor(private readonly _service: Object,
                 public readonly origin = getParentUrl(),
                 private readonly _target = window.parent,
                 private readonly _win = window) {

@@ -12,7 +12,7 @@ describe('ProxyListener', () => {
     let mockOrigin: string;
     let mockTarget;
     let mockWindow;
-    let listener: ProxyListener<MockService>;
+    let listener: ProxyListener;
 
     beforeEach(() => {
         mockService = new MockService();
