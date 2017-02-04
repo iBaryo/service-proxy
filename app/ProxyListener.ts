@@ -1,6 +1,5 @@
-import {IProxyRequest, IProxyResponse, IProxyError} from "./interfaces";
+import {IProxyRequest, IProxyResponse, IProxyError, ProxySignal} from "./interfaces";
 import {getParentUrl,validateOrigin} from "./utils";
-import {ProxySignal} from "./interfaces";
 
 export class ProxyListener {
     constructor(private readonly _service: Object,
