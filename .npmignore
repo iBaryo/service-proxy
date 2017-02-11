@@ -1,6 +1,6 @@
 node_modules
 spec
 **/*.ts
-!**/*.d.ts
+!src/**/*.d.ts
 gulpfile.js
 example

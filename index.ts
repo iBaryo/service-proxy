@@ -7,6 +7,6 @@ export async function createProxy(url: string): Promise<ServiceProxy> {
     return service;
 };
 
-export async function createListener(service) {
+export async function createListener(service : Object) {
     return new ProxyListener(service);
 }

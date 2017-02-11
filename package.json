@@ -6,7 +6,7 @@
   "scripts": {
     "build": "gulp compile",
     "test": "gulp",
-    "example": "gulp build-example && http-server"
+    "example": "browserify example/main.ts -p [ tsify --project ./tsconfig.json ] -d -o ./example/main.js && browserify example/service.ts -p [ tsify --project ./tsconfig.json ] -d -o ./example/service.js && http-server"
   },
   "author": "iBaryo",
   "license": "MIT",
@@ -17,12 +17,10 @@
     "@types/node": "^6.0.48",
     "browserify": "^14.0.0",
     "gulp": "^3.9.1",
-    "gulp-buffer": "0.0.2",
     "gulp-jasmine": "^2.4.2",
-    "gulp-tap": "^0.1.3",
     "gulp-tsc": "^1.2.6",
-    "gulp-util": "^3.0.8",
     "run-sequence": "^1.2.2",
+    "tsify": "^3.0.1",
     "typescript": "^2.1.4"
   }
 }
