@@ -1,6 +1,11 @@
 node_modules
+.idea/**/*
+.npmignore
 spec
 **/*.ts
+**/*.js.map
 !src/**/*.d.ts
-gulpfile.js
+!index.d.ts
 example
+tsconfig.json
+*.log.*

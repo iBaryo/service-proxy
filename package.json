@@ -1,6 +1,6 @@
 {
   "name": "browser-service-proxy",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "invoking methods of an object inside an iframe",
   "main": "index.js",
   "scripts": {
