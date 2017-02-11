@@ -5,5 +5,5 @@ const service = new MockService();
 (async ()=> {
     const listener = await createListener(service);
     listener.listen();
-    console.log('iframe listening');
+    console.log(`iframe listening on ${window.location.href}`);
 })();
