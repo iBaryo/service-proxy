@@ -1,5 +1,5 @@
 {
-  "name": "ServiceProxy",
+  "name": "service-proxy",
   "version": "0.0.1",
   "description": "invoking methods of an object inside an iframe",
   "main": "index.js",
