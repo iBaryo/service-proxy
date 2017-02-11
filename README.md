@@ -1,4 +1,4 @@
-# Service Proxy
+# Browser Service Proxy
 Create a proxy for a service instance that exists in a different page.
 
 ## Usage
@@ -16,7 +16,7 @@ and we want to use an instance of it that exists within a different page that mi
 
 ### In the Main page
 ```js
-import {createProxy} from "service-proxy";
+import {createProxy} from "browser-service-proxy";
 import {MockService} from "./common";
 
 // async IIFE
@@ -35,8 +35,8 @@ import {MockService} from "./common";
 
 ### In the different page
 (according to our example, it'll will be in http://different-domain.com:8080/example/service.html)
-```
-import {createListener} from "service-proxy";
+```js
+import {createListener} from "browser-service-proxy";
 import {MockService} from "./common";
 
 // Creating the service instance
@@ -50,6 +50,13 @@ const service = new MockService();
     listener.listen();
 })();
 ```
+
+## Running the example
+- Add to your hosts file the following entry:
+`127.0.0.1  different-domain.com`
+
+- Run `npm run example`
+- Open you browser at `localhost:8080/example/main.html`
 
 ## Notes
 - The creation of the Proxy will only resolve when an active listener has started listening.
