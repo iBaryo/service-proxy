@@ -1,5 +1,5 @@
 export class MockService {
-    mockMethod() {
-        return new Promise(resolve => setTimeout(()=> resolve(42), 100));
+    public mockMethod(param?     : any) {
+        return new Promise(resolve => setTimeout(()=> resolve(param), 100));
     }
 }
