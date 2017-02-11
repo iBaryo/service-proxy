@@ -24,7 +24,7 @@ export class ServiceProxy {
             // todo: i don't really like this - should refactor
             const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
             const onInitResponse = (e: MessageEvent) => {
-                if (validateOrigin(this.url, e.origin)
+                if (this.validateOrigin(e.origin)
                     && e.data === ProxySignal.Listening) {
                     this._win.clearTimeout(timeoutId);
                     this._win.removeEventListener('message', onInitResponse, true);
@@ -37,9 +37,13 @@ export class ServiceProxy {
         });
     }
 
+    private validateOrigin(checked : string) {
+        return validateOrigin(this._iframe.src, checked);
+    }
+
     private onResponse = (e: MessageEvent & {data: IProxyResponse}) => { // arrow function to preserve context
         const msg = e.data;
-        if (validateOrigin(this.url, e.origin) && msg && this._pendingReqs[msg.id]) {
+        if (this.validateOrigin(e.origin) && msg && this._pendingReqs[msg.id]) {
             this._pendingReqs[msg.id](msg);
             delete this._pendingReqs[msg.id];
         }
@@ -47,7 +51,7 @@ export class ServiceProxy {
 
     private postToIFrame(req: IProxyMessage) {
         const onMsgResponse = this.registerMessage(req);
-        this._iframe.contentWindow.postMessage(req, this.url);
+        this._iframe.contentWindow.postMessage(req, this._iframe.src);
         return onMsgResponse;
     }
 

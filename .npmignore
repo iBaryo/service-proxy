@@ -3,4 +3,4 @@ spec
 **/*.ts
 !**/*.d.ts
 gulpfile.js
-tsconfig.json
+example

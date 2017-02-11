@@ -1,6 +1,6 @@
-import {ProxyListener} from "../app/ProxyListener";
-import {ProxySignal, IProxyRequest, IProxyResponse} from "../app/interfaces";
-import {IProxyError} from "../app/interfaces";
+import {ProxyListener} from "../src/ProxyListener";
+import {ProxySignal, IProxyRequest, IProxyResponse} from "../src/interfaces";
+import {IProxyError} from "../src/interfaces";
 import {Async, resetSpies} from "./utils";
 
 describe('ProxyListener', () => {

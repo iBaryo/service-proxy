@@ -1,6 +1,6 @@
-import {ServiceProxy} from "../app/ServiceProxy";
+import {ServiceProxy} from "../src/ServiceProxy";
 import {Async} from "./utils";
-import {ProxySignal, IProxyRequest, IProxyResponse} from "../app/interfaces";
+import {ProxySignal, IProxyRequest, IProxyResponse} from "../src/interfaces";
 
 describe('ServiceProxy', () => {
     const mockUrl = 'mockUrl.com';

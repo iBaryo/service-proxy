@@ -1,5 +1,5 @@
-import {ServiceProxy} from "./app/ServiceProxy";
-import {ProxyListener} from "./app/ProxyListener";
+import {ServiceProxy} from "./src/ServiceProxy";
+import {ProxyListener} from "./src/ProxyListener";
 
 export async function createProxy(url: string): Promise<ServiceProxy> {
     const service = new ServiceProxy(url);

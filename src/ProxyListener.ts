@@ -63,7 +63,7 @@ export class ProxyListener {
         return result;
     }
 
-    private postMessage(msg: any) {
+    protected postMessage(msg: any) {
         this._target.postMessage(msg, this.origin);
     }
 
