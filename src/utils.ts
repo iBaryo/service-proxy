@@ -5,11 +5,19 @@ export const getParentUrl =
 
 export const validateOrigin = (origin: string, checked: string) => origin.indexOf(checked) === 0;
 
+export const createIframe = () => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.height = '0px';
+    iframe.style.width = '0px';
+    iframe.style.visibility = 'hidden';
+    return iframe;
+};
+
 let _counter = 1;
 export const generateId = () => {
     return String(_counter++);
 };
-
 
 // http://stackoverflow.com/questions/31054910/get-functions-methods-of-a-class
 export const getAllClassMethodsNames = (type: new()=>any) : string[] => {

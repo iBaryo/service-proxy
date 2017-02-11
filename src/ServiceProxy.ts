@@ -1,4 +1,4 @@
-import {generateId, validateOrigin} from "./utils";
+import {generateId, validateOrigin, createIframe} from "./utils";
 import {ProxySignal, IProxyRequest, IProxyResponse, IProxyMessage} from "./interfaces";
 import {getAllClassMethodsNames} from "./utils";
 
@@ -9,7 +9,7 @@ export class ServiceProxy {
     constructor(public readonly url: string,
                 public readonly timeout = 5000,
                 private readonly _idCreator = generateId,
-                private readonly _iframeCreator = () => document.createElement('iframe'),
+                private readonly _iframeCreator = createIframe,
                 private readonly _iframeHost = document.body,
                 private readonly _win = window) {
     }
