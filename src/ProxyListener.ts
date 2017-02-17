@@ -1,4 +1,4 @@
-import {IProxyRequest, IProxyResponse, IProxyError, ProxySignal} from "./interfaces";
+import {IProxyRequest, IProxyResponse, ProxySignal} from "./interfaces";
 import {getParentUrl,validateOrigin} from "./utils";
 
 export class ProxyListener {
@@ -43,7 +43,7 @@ export class ProxyListener {
                 } as IProxyResponse);
             }
             catch (e) {
-                this.postError({err: e, id: req.id});
+                this.postError({res: e.message || e, id: req.id});
             }
         }
     };
@@ -67,7 +67,8 @@ export class ProxyListener {
         this._target.postMessage(msg, this.origin);
     }
 
-    private postError(err: IProxyError) {
+    private postError(err: IProxyResponse) {
+        err.signal = ProxySignal.Error;
         this.postMessage(err);
     }
 }

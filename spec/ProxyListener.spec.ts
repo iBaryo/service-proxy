@@ -1,6 +1,5 @@
 import {ProxyListener} from "../src/ProxyListener";
 import {ProxySignal, IProxyRequest, IProxyResponse} from "../src/interfaces";
-import {IProxyError} from "../src/interfaces";
 import {Async, resetSpies} from "./utils";
 
 describe('ProxyListener', () => {
@@ -74,6 +73,8 @@ describe('ProxyListener', () => {
         });
     });
     describe('on message', () => {
+        const methodName = 'mockMethod';
+
         let sendMsg: (e: MessageEvent) => Promise<any>;
         let mockId: string;
 
@@ -86,7 +87,6 @@ describe('ProxyListener', () => {
             resetSpies(mockTarget);
         });
         it('should ignore if message\'s domain is not from origin', Async(async() => {
-            const methodName = 'mockMethod';
             spyOn(mockService, methodName);
             await sendMsg({
                 origin: 'not-origin.com',
@@ -101,7 +101,6 @@ describe('ProxyListener', () => {
         }));
 
         it('should report error if message is missing id', Async(async() => {
-            const methodName = 'mockMethod';
             spyOn(mockService, methodName);
             await sendMsg({
                 origin: mockOrigin,
@@ -112,13 +111,13 @@ describe('ProxyListener', () => {
 
             expect(mockService[methodName]).not.toHaveBeenCalled();
             expect(mockTarget.postMessage).toHaveBeenCalledTimes(1);
-            expect(mockTarget.postMessage.calls.mostRecent().args[0] as IProxyError).toEqual({
+            expect(mockTarget.postMessage.calls.mostRecent().args[0] as IProxyResponse).toEqual({
                 id: undefined,
-                err: 'proxy request in invalid format'
-            });
+                res: 'proxy request in invalid format',
+                signal: ProxySignal.Error
+            }  as IProxyResponse);
         }));
         it('should report error if message is missing methodName', Async(async() => {
-            const methodName = 'mockMethod';
             spyOn(mockService, methodName);
             await sendMsg({
                 origin: mockOrigin,
@@ -129,13 +128,13 @@ describe('ProxyListener', () => {
 
             expect(mockService[methodName]).not.toHaveBeenCalled();
             expect(mockTarget.postMessage).toHaveBeenCalledTimes(1);
-            expect(mockTarget.postMessage.calls.mostRecent().args[0] as IProxyError).toEqual({
+            expect(mockTarget.postMessage.calls.mostRecent().args[0] as IProxyResponse).toEqual({
                 id: mockId,
-                err: 'proxy request in invalid format'
-            });
+                res: 'proxy request in invalid format',
+                signal: ProxySignal.Error
+            }  as IProxyResponse);
         }));
         it('should forward request to service', Async(async() => {
-            const methodName = 'mockMethod';
             spyOn(mockService, methodName);
             await sendMsg({
                 origin: mockOrigin,
@@ -148,7 +147,6 @@ describe('ProxyListener', () => {
             expect(mockService[methodName]).toHaveBeenCalled();
         }));
         it('should post message to target with original request id', Async(async() => {
-            const methodName = 'mockMethod';
             spyOn(mockService, methodName);
             await sendMsg({
                 origin: mockOrigin,
@@ -162,7 +160,6 @@ describe('ProxyListener', () => {
             expect(mockTarget.postMessage).toHaveBeenCalledWith({id: mockId, res: undefined}, mockOrigin);
         }));
         it('should forward request to service with parameters', Async(async() => {
-            const methodName = 'mockMethod';
             const param1 = {};
             const param2 = {};
             spyOn(mockService, methodName).and.callFake((param1, param2) => {
@@ -182,11 +179,11 @@ describe('ProxyListener', () => {
             expect(mockTarget.postMessage).toHaveBeenCalledWith({id: mockId, res: undefined}, mockOrigin);
         }));
         it('should post error to target if service throws', Async(async() => {
-            const methodName = 'mockMethod';
             const err = 'error123';
             spyOn(mockService, methodName).and.callFake(() => {
                 throw err;
             });
+
             await sendMsg({
                 origin: mockOrigin,
                 data: {
@@ -197,13 +194,46 @@ describe('ProxyListener', () => {
 
             expect(mockService[methodName]).toHaveBeenCalled();
             expect(mockTarget.postMessage).toHaveBeenCalledTimes(1);
-            const errMsg = mockTarget.postMessage.calls.mostRecent().args[0] as IProxyError;
+            const errMsg = mockTarget.postMessage.calls.mostRecent().args[0] as IProxyResponse;
             expect(errMsg.id).toBe(mockId);
-            expect(errMsg.err).toBe(err);
-            expect((errMsg as any as IProxyResponse).res).toBeUndefined();
+            expect(errMsg.res).toBe(err);
+            expect(errMsg.signal).toBe(ProxySignal.Error);
+        }));
+        it('should post error to target if service throws async', Async(async() => {
+            const err = 'error123';
+            spyOn(mockService, methodName).and.returnValue(Promise.reject(err));
+
+            await sendMsg({
+                origin: mockOrigin,
+                data: {
+                    id: mockId,
+                    methodName,
+                } as IProxyRequest
+            } as MessageEvent);
+
+            const errMsg = mockTarget.postMessage.calls.mostRecent().args[0] as IProxyResponse;
+            expect(errMsg.id).toBe(mockId);
+            expect(errMsg.res).toBe(err);
+            expect(errMsg.signal).toBe(ProxySignal.Error);
+        }));
+        it('should post error message to target if service throws an error object', Async(async() => {
+            const err = 'error123';
+            spyOn(mockService, methodName).and.throwError(err);
+
+            await sendMsg({
+                origin: mockOrigin,
+                data: {
+                    id: mockId,
+                    methodName,
+                } as IProxyRequest
+            } as MessageEvent);
+
+            const errMsg = mockTarget.postMessage.calls.mostRecent().args[0] as IProxyResponse;
+            expect(errMsg.id).toBe(mockId);
+            expect(errMsg.res).toBe(err);
+            expect(errMsg.signal).toBe(ProxySignal.Error);
         }));
         it('should post message to target with service\'s response', Async(async() => {
-            const methodName = 'mockMethod';
             const res = {};
             spyOn(mockService, methodName).and.returnValue(res);
             await sendMsg({
@@ -218,7 +248,6 @@ describe('ProxyListener', () => {
             expect(mockTarget.postMessage).toHaveBeenCalledWith({id: mockId, res}, mockOrigin);
         }));
         it('should post message to target with service\'s response unwrap from Promise', Async(async() => {
-            const methodName = 'mockMethod';
             const res = {};
             spyOn(mockService, methodName).and.returnValue(Promise.resolve(res));
             await sendMsg({

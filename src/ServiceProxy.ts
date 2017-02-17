@@ -37,7 +37,7 @@ export class ServiceProxy {
         });
     }
 
-    private validateOrigin(checked : string) {
+    private validateOrigin(checked: string) {
         return validateOrigin(this._iframe.src, checked);
     }
 
@@ -49,14 +49,14 @@ export class ServiceProxy {
         }
     };
 
-    private postToIFrame(req: IProxyMessage) {
-        const onMsgResponse = this.registerMessage(req);
+    private postToIFrame<T>(req: IProxyMessage) {
+        const onMsgResponse = this.registerMessage<T>(req);
         this._iframe.contentWindow.postMessage(req, this._iframe.src);
         return onMsgResponse;
     }
 
-    private registerMessage(req: IProxyMessage, timeout = this.timeout) {
-        return new Promise<IProxyResponse>((resolve, reject) => {
+    private registerMessage<T>(req: IProxyMessage, timeout = this.timeout) {
+        return new Promise<T>((resolve, reject) => {
 
             const timeoutId = this._win.setTimeout(() => {
                 reject('proxy request timeout');
@@ -64,17 +64,22 @@ export class ServiceProxy {
 
             this._pendingReqs[req.id] = (e: IProxyResponse) => {
                 this._win.clearTimeout(timeoutId);
-                resolve(e);
+                if (e.signal === ProxySignal.Error) {
+                    reject(e.res);
+                }
+                else {
+                    resolve(e.res);
+                }
             };
         });
     }
 
     public sendRequest<T>(methodName: string, params?: any[]): Promise<T> {
-        return this.postToIFrame({
+        return this.postToIFrame<T>({
             id: this._idCreator(),
             methodName,
             params
-        } as IProxyRequest).then(msg => msg.res);
+        } as IProxyRequest);
     }
 
     public stop() {

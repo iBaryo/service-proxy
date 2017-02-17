@@ -7,17 +7,11 @@ export interface IProxyRequest extends IProxyMessage {
 }
 export interface IProxyResponse extends IProxyMessage {
     res : any;
-}
-
-export interface IProxyError extends IProxyMessage {
-    err: string;
-}
-
-export interface IProxySignalMessage extends IProxyMessage {
-    signal : ProxySignal;
+    signal? : ProxySignal;
 }
 
 export const enum ProxySignal {
     Listening = 900,
-    StopListening
+    StopListening,
+    Error
 }

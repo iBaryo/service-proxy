@@ -11,7 +11,7 @@ import {MockService} from "./common";
 
 async function testProxy(url : string) {
     const mockProxy = (await createProxy(url)).wrapWith(MockService);
-    console.log('proxy created!');
+    console.log('service proxy created!');
 
 
     console.log('invoking method with no params...');
@@ -25,4 +25,20 @@ async function testProxy(url : string) {
     console.log('invoking method with object...');
     result = await mockProxy.mockMethod({success:'great'});
     console.log(`method invoked! result: ${JSON.stringify(result)}`);
+
+    console.log('invoking method that throws sync...');
+    try {
+        await mockProxy.throwSyncMethod();
+    }
+    catch (e) {
+        console.log(`method invoked! threw: ${e}`);
+    }
+
+    console.log('invoking method that throws async...');
+    try {
+        await mockProxy.throwAsyncMethod();
+    }
+    catch (e) {
+        console.log(`method invoked! threw: ${e}`);
+    }
 }

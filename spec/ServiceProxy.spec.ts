@@ -194,6 +194,23 @@ describe('ServiceProxy', () => {
                     expect(result).toBe(mockProxyRes.res);
                 }));
 
+                it('should reject when gotten an error response', Async(async() => {
+                    mockProxyRes.signal = ProxySignal.Error;
+                    mockProxyRes.res = 'error';
+                    respondToRequest({
+                        origin: mockUrl,
+                        data: mockProxyRes
+                    } as MessageEvent);
+
+                    try {
+                        await pendingReq;
+                        fail();
+                    }
+                    catch (e) {
+                        expect(e).toBe(mockProxyRes.res);
+                    }
+                }));
+
                 it('should handle multiple requests with different responses order', Async(async() => {
                     // Arrange
                     const pendingReq2 = proxy.sendRequest(methodName);
