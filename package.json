@@ -1,6 +1,6 @@
 {
   "name": "browser-service-proxy",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Create a proxy for a service instance that exists in a different page.",
   "main": "index.js",
   "scripts": {
