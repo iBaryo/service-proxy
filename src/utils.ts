@@ -1,12 +1,17 @@
 export const getParentUrl =
-    () => (window.location != window.parent.location)
-        ? document.referrer
-        : document.location.href;
+    (win = window, doc = document) => (win.location != win.parent.location)
+        ? doc.referrer
+        : doc.location.href;
+
+export const getBodyElement = (doc = document) => new Promise<HTMLElement>(resolve => {
+    if (doc.body) resolve(doc.body);
+    else doc.addEventListener('DOMContentLoaded', () => resolve(doc.body));
+});
 
 export const validateOrigin = (origin: string, checked: string) => origin.indexOf(checked) === 0;
 
-export const createIframe = () => {
-    const iframe = document.createElement('iframe');
+export const createIframe = (doc = document) => {
+    const iframe = doc.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.height = '0px';
     iframe.style.width = '0px';
@@ -20,13 +25,13 @@ export const generateId = () => {
 };
 
 // http://stackoverflow.com/questions/31054910/get-functions-methods-of-a-class
-export const getAllClassMethodsNames = (type: new()=>any) : string[] => {
-    let props : string[] = [];
+export const getAllClassMethodsNames = (type: new()=>any): string[] => {
+    let props: string[] = [];
 
     let proto = type.prototype;
     do {
         const l = Object.getOwnPropertyNames(proto)
-            // .concat(Object.getOwnPropertySymbols(proto).map(s => s.toString()))
+        // .concat(Object.getOwnPropertySymbols(proto).map(s => s.toString()))
             .map(s => s.toString())
             .sort()
             .filter((p, i, arr) =>

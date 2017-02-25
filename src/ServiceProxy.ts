@@ -1,39 +1,42 @@
-import {generateId, validateOrigin, createIframe} from "./utils";
+import {generateId, validateOrigin, createIframe, getAllClassMethodsNames, getBodyElement} from "./utils";
 import {ProxySignal, IProxyRequest, IProxyResponse, IProxyMessage} from "./interfaces";
-import {getAllClassMethodsNames} from "./utils";
 
 export class ServiceProxy {
     private _iframe: HTMLIFrameElement;
+    private _iframeHost: HTMLElement;
     private _pendingReqs: ((e: MessageEvent & {data: IProxyResponse})=>void)[] = [];
 
     constructor(public readonly url: string,
                 public readonly timeout = 5000,
                 private readonly _idCreator = generateId,
                 private readonly _iframeCreator = createIframe,
-                private readonly _iframeHost = document.body,
+                private readonly getIframeHost = getBodyElement,
                 private readonly _win = window) {
     }
 
     public init(): Promise<void> {
-        this._iframe = this._iframeCreator();
-        this._iframe.src = this.url;
-        this._iframeHost.appendChild(this._iframe);
-        this._win.addEventListener('message', this.onResponse, true);
-
         return new Promise<void>((resolve, reject) => {
-            // todo: i don't really like this - should refactor
-            const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
-            const onInitResponse = (e: MessageEvent) => {
-                if (this.validateOrigin(e.origin)
-                    && e.data === ProxySignal.Listening) {
-                    this._win.clearTimeout(timeoutId);
-                    this._win.removeEventListener('message', onInitResponse, true);
-                    this._win.addEventListener('message', this.onResponse, true);
-                    resolve();
-                }
-            };
+            this._iframe = this._iframeCreator();
+            this._iframe.src = this.url;
+            this.getIframeHost().then(host => {
+                this._iframeHost = host;
+                this._iframeHost.appendChild(this._iframe);
+                this._win.addEventListener('message', this.onResponse, true);
 
-            this._win.addEventListener('message', onInitResponse, true);
+                // todo: i don't really like this - should refactor
+                const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
+                const onInitResponse = (e: MessageEvent) => {
+                    if (this.validateOrigin(e.origin)
+                        && e.data === ProxySignal.Listening) {
+                        this._win.clearTimeout(timeoutId);
+                        this._win.removeEventListener('message', onInitResponse, true);
+                        this._win.addEventListener('message', this.onResponse, true);
+                        resolve();
+                    }
+                };
+
+                this._win.addEventListener('message', onInitResponse, true);
+            });
         });
     }
 

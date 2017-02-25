@@ -10,6 +10,9 @@ describe('ServiceProxy', () => {
     let mockIFrameCreator;
     let mockIFrame;
     let mockIFrameHost;
+
+    let mockGetIFrameHost;
+    let resolveIFrameHost;
     let mockWindow;
 
     let proxy: ServiceProxy;
@@ -24,6 +27,9 @@ describe('ServiceProxy', () => {
         mockIFrameHost = {
             appendChild: jasmine.createSpy('iframe-host-append-child')
         };
+        let hostResolver;
+        mockGetIFrameHost = ()=> new Promise(resolve => hostResolver = resolve);
+        resolveIFrameHost = () => hostResolver(mockIFrameHost);
         mockWindow = {
             addEventListener: jasmine.createSpy('win-add-event-listener'),
             removeEventListener: jasmine.createSpy('win-remove-event-listener'),
@@ -34,7 +40,7 @@ describe('ServiceProxy', () => {
         mockId = 0;
         const mockIdCreator = () => String(++mockId);
 
-        proxy = new ServiceProxy(mockUrl, jasmine.DEFAULT_TIMEOUT_INTERVAL / 5, mockIdCreator, mockIFrameCreator, mockIFrameHost, mockWindow);
+        proxy = new ServiceProxy(mockUrl, jasmine.DEFAULT_TIMEOUT_INTERVAL / 5, mockIdCreator, mockIFrameCreator, mockGetIFrameHost, mockWindow);
     });
 
     it('should initialize', () => expect(proxy).toBeTruthy());
@@ -43,24 +49,25 @@ describe('ServiceProxy', () => {
         let initPromise: Promise<void>;
         let respondToInit: (e: MessageEvent) => Promise<void>;
 
-        beforeEach(() => {
+        beforeEach(Async(async () => {
             initPromise = proxy.init();
+            resolveIFrameHost();
+            await mockGetIFrameHost;
+
             respondToInit = mockWindow.addEventListener.calls.mostRecent().args[1];
-        });
+        }));
 
         describe('init', () => {
-            it('should open an iframe in given url', () => {
+            it('should open an iframe in given url', Async(async () => {
                 expect(mockIFrameCreator).toHaveBeenCalled();
                 expect(mockIFrameHost.appendChild).toHaveBeenCalledWith(mockIFrame);
                 expect(mockIFrame.src).toBe(mockUrl);
-            });
+            }));
 
             it('should start listening for iframe\'s listener', () => {
                 expect(mockWindow.addEventListener).toHaveBeenCalledWith('message', jasmine.any(Function), true);
             });
             describe('responses from iframe', () => {
-
-
                 it('should ignore messages from other domains', Async(async() => {
                     initPromise.then(fail);
                     await respondToInit({
