@@ -14,7 +14,7 @@ export class MockService {
 
 and we want to use an instance of it that exists within a different page that might be in a different domain.
 
-### In the Main page
+### Service Proxy in the Main page
 ```js
 import {createProxy} from "browser-service-proxy";
 import {MockService} from "./common";
@@ -33,7 +33,7 @@ import {MockService} from "./common";
 })();
 ```
 
-### In the different page
+### Service Listener in another page
 (according to our example, it'll will be in http://different-domain.com:8080/example/service.html)
 ```js
 import {createListener} from "browser-service-proxy";
@@ -51,12 +51,38 @@ const service = new MockService();
 })();
 ```
 
+#### Advanced customization for Service Listener
+```js
+// Starting to listen and passing initial value.
+listener.listen({ initial: 'everything is awesome' });
+
+// Setting a listener-stop canceller
+// - for example this will cancel the stopping of the service when trying for the first time
+let cancelStop = true;
+listener.stopCancellers.push(async () => {
+    await delay(10);
+    if (cancelStop) {
+        cancelStop = false;
+        return {cancelReason: 'fun'};
+    }
+    else {
+        return false;
+    }
+});
+
+// Setting a value that will return when stopping
+listener.onStop = () => ({goodbye: 'so long, travel safe'});
+```
+
+
 ## Running the example
 - Add to your hosts file the following entry:
 `127.0.0.1  different-domain.com`
 
 - Run `npm run example`
 - Open you browser at `localhost:8080/example/main.html`
+- Open dev tools
 
 ## Notes
 - The creation of the Proxy will only resolve when an active listener has started listening.
+- All of the wrapped service's methods must return a `Promise`, due to the asynchronous nature of iframes communication. 

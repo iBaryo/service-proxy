@@ -1,4 +1,4 @@
-import {createProxy, ServiceProxy} from "../index";
+import {ServiceProxy} from "../index";
 import {MockService} from "./common";
 
 (async() => {
@@ -13,7 +13,7 @@ async function testProxy(url : string) {
 
     const proxy = new ServiceProxy(url);
     const initRes = await proxy.init<{ initial: string }>();
-    console.log(`service proxy created! initial value: ${initRes.initial}`);
+    console.log(`service proxy created! received value: ${initRes.initial}`);
 
     const mockProxy = proxy.wrapWith(MockService);
 
@@ -44,4 +44,16 @@ async function testProxy(url : string) {
     catch (e) {
         console.log(`method invoked! threw: ${e}`);
     }
+
+    console.log(`trying to stop the proxy but it'll fail...`);
+    try {
+    await proxy.stop<void>();
+    }
+    catch(e) {
+        console.log(`service proxy stopped failing as planned! received value: ${JSON.stringify(e)}`);
+    }
+
+    console.log(`now really stopping proxy...`);
+    const stopRes = await proxy.stop<{goodbye : string}>();
+    console.log(`service proxy stopped! received value: ${stopRes.goodbye}`);
 }

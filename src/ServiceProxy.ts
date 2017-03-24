@@ -1,5 +1,5 @@
 import {generateId, validateOrigin, createIframe, getAllClassMethodsNames, getBodyElement} from "./utils";
-import {ProxySignal, IProxyRequest, IProxyResponse, IProxyMessage} from "./interfaces";
+import {ProxySignal, IProxyRequest, IProxyResponse, IProxyMessage, IProxySignalRequest} from "./interfaces";
 
 export class ServiceProxy {
     private _iframe: HTMLIFrameElement;
@@ -14,44 +14,51 @@ export class ServiceProxy {
                 private readonly _win = window) {
     }
 
+    public get isInit() {
+        return Boolean(this._iframe);
+    }
+
     public init<T>(): Promise<T> {
-        return new Promise<T>((resolve, reject) => {
-            this._iframe = this._iframeCreator();
-            this._iframe.src = this.url;
-            this.getIframeHost().then(host => {
-                this._iframeHost = host;
-                this._iframeHost.appendChild(this._iframe);
-                this._win.addEventListener('message', this.onResponse, true);
+        if (this.isInit)
+            return Promise.reject('proxy already initialized') as any;
+        else
+            return new Promise<T>((resolve, reject) => {
+                this._iframe = this._iframeCreator();
+                this._iframe.src = this.url;
+                this.getIframeHost().then(host => {
+                    this._iframeHost = host;
+                    this._iframeHost.appendChild(this._iframe);
+                    this._win.addEventListener('message', this.onResponse, true);
 
-                const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
-                const onInitResponse = (e: MessageEvent) => {
-                    if (this.validateOrigin(e.origin)) {
-                        const response = e.data as IProxyResponse;
+                    const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
+                    const onInitResponse = (e: MessageEvent) => {
+                        if (this.validateOrigin(e.origin)) {
+                            const response = e.data as IProxyResponse;
 
-                        if (response.signal) {
-                            this._win.clearTimeout(timeoutId);
-                            this._win.removeEventListener('message', onInitResponse, true);
+                            if (response.signal) {
+                                this._win.clearTimeout(timeoutId);
+                                this._win.removeEventListener('message', onInitResponse, true);
 
-                            switch (response.signal) {
-                                case ProxySignal.Listening:
-                                    this._win.addEventListener('message', this.onResponse, true);
-                                    resolve(response.res);
-                                    break;
-                                case ProxySignal.Error:
-                                case ProxySignal.StopListening:
-                                    reject(response.res);
-                                    break;
-                                default:
-                                    reject('unsupported response');
-                                    break;
+                                switch (response.signal) {
+                                    case ProxySignal.Listening:
+                                        this._win.addEventListener('message', this.onResponse, true);
+                                        resolve(response.res);
+                                        break;
+                                    case ProxySignal.Error:
+                                    case ProxySignal.StopListening:
+                                        reject(response.res);
+                                        break;
+                                    default:
+                                        reject('unsupported response');
+                                        break;
+                                }
                             }
                         }
-                    }
-                };
+                    };
 
-                this._win.addEventListener('message', onInitResponse, true);
+                    this._win.addEventListener('message', onInitResponse, true);
+                });
             });
-        });
     }
 
     private validateOrigin(checked: string) {
@@ -72,7 +79,7 @@ export class ServiceProxy {
         return onMsgResponse;
     }
 
-    private registerMessage<T>(req: IProxyMessage, timeout = this.timeout) {
+    private registerMessage<T>(req: IProxyMessage, timeout = this.timeout): Promise<T> {
         return new Promise<T>((resolve, reject) => {
 
             const timeoutId = this._win.setTimeout(() => {
@@ -99,10 +106,31 @@ export class ServiceProxy {
         } as IProxyRequest);
     }
 
-    public stop() {
-        // todo: add notifying the listener
-        this._win.removeEventListener('message', this.onResponse, true);
-        this._iframeHost.removeChild(this._iframe);
+    public async stop<T>(forceClose = false) : Promise<T> {
+        if (!this.isInit) {
+            throw 'proxy is not active';
+        }
+        else {
+            let error;
+
+            try {
+                return await this.postToIFrame<T>({
+                    id: this._idCreator(),
+                    signal: ProxySignal.StopListening
+                } as IProxySignalRequest);
+            }
+            catch (e) {
+                error = e;
+                throw e;
+            }
+            finally {
+                if (!error || forceClose) {
+                    this._win.removeEventListener('message', this.onResponse, true);
+                    this._iframeHost.removeChild(this._iframe);
+                    delete this._iframe;
+                }
+            }
+        }
     }
 
     public wrapWith<T>(type: new() => T): T;
