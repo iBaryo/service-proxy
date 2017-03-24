@@ -31,10 +31,15 @@ describe('ProxyListener', () => {
 
     describe('listen', () => {
         it('should start listening', () => {
-            listener.listen();
+            const res = {};
+            listener.listen(res);
 
             expect(mockWindow.addEventListener).toHaveBeenCalledWith('message', jasmine.any(Function), true);
-            expect(mockTarget.postMessage).toHaveBeenCalledWith(ProxySignal.Listening, mockOrigin);
+            expect(mockTarget.postMessage).toHaveBeenCalledWith({
+                id: undefined,
+                signal: ProxySignal.Listening,
+                res
+            } as IProxyResponse, mockOrigin);
             expect(listener.isListening).toBeTruthy();
         });
 
@@ -52,11 +57,16 @@ describe('ProxyListener', () => {
             listener.listen();
             mockTarget.postMessage.calls.reset();
 
-            listener.stopListen();
+            const res = {};
+            listener.stopListen(res);
 
             const eventListener = mockWindow.addEventListener.calls.mostRecent().args[1];
             expect(mockWindow.removeEventListener).toHaveBeenCalledWith('message', eventListener, true);
-            expect(mockTarget.postMessage).toHaveBeenCalledWith(ProxySignal.StopListening, mockOrigin);
+            expect(mockTarget.postMessage).toHaveBeenCalledWith({
+                id: undefined,
+                signal: ProxySignal.StopListening,
+                res
+            } as IProxyResponse, mockOrigin);
             expect(listener.isListening).toBeFalsy();
         });
         it('should not do anything if not listening', () => {

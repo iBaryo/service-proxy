@@ -47,10 +47,10 @@ describe('ServiceProxy', () => {
 
     describe('methods', () => {
         let initPromise: Promise<void>;
-        let respondToInit: (e: MessageEvent) => Promise<void>;
+        let respondToInit: (e: MessageEvent & {data: IProxyResponse}) => Promise<void>;
 
         beforeEach(Async(async () => {
-            initPromise = proxy.init();
+            initPromise = proxy.init<any>();
             resolveIFrameHost();
             await mockGetIFrameHost;
 
@@ -72,34 +72,89 @@ describe('ServiceProxy', () => {
                     initPromise.then(fail);
                     await respondToInit({
                         origin: 'not-origin.com',
-                        data: ProxySignal.Listening
+                        data: {
+                            id: mockId,
+                            signal: ProxySignal.Listening,
+                            res: {}
+                        } as IProxyResponse
                     } as MessageEvent);
 
                     expect(mockWindow.clearTimeout).not.toHaveBeenCalled();
                     expect(mockWindow.removeEventListener).not.toHaveBeenCalled();
                 }));
-                it('should ignore messages that does not confirm listening', Async(async() => {
+                it('should ignore messages that does not contain signals', Async(async() => {
                     initPromise.then(fail);
                     await respondToInit({
                         origin: mockUrl,
-                        data: 'not a proxy signal'
+                        data: {
+                            id: undefined,
+                            signal: undefined,
+                            res: {}
+                        } as IProxyResponse
                     } as MessageEvent);
 
                     expect(mockWindow.clearTimeout).not.toHaveBeenCalled();
                     expect(mockWindow.removeEventListener).not.toHaveBeenCalled();
                 }));
-                it('should finish only when receiving response from iframe', Async(async() => {
+                it('should throw if receiving an error', Async(async() => {
+                    const err = {};
                     await respondToInit({
                         origin: mockUrl,
-                        data: ProxySignal.Listening
+                        data: {
+                            id: undefined,
+                            signal: ProxySignal.Error,
+                            res: err
+                        } as IProxyResponse
                     } as MessageEvent);
 
-                    await initPromise;
+                    try {
+                        await initPromise;
+                        fail();
+                    }
+                    catch(e) {
+                        expect(e).toBe(err);
+                    }
+                }));
+                it('should throw if receiving stop listen signal', Async(async() => {
+                    const err = {};
+                    await respondToInit({
+                        origin: mockUrl,
+                        data: {
+                            id: undefined,
+                            signal: ProxySignal.StopListening,
+                            res: err
+                        } as IProxyResponse
+                    } as MessageEvent);
+
+                    try {
+                        await initPromise;
+                        fail();
+                    }
+                    catch(e) {
+                        expect(e).toBe(err);
+                    }
+                }));
+                it('should finish only when receiving response from iframe', Async(async() => {
+                    const res = {};
+                    await respondToInit({
+                        origin: mockUrl,
+                        data: {
+                            id: undefined,
+                            signal: ProxySignal.Listening,
+                            res
+                        } as IProxyResponse
+                    } as MessageEvent);
+
+                    expect(await initPromise).toBe(res);
                 }));
                 it('should clean stuff when resolving', Async(async() => {
                     await respondToInit({
                         origin: mockUrl,
-                        data: ProxySignal.Listening
+                        data: {
+                            id: undefined,
+                            signal: ProxySignal.Listening,
+                            res: undefined
+                        } as IProxyResponse
                     } as MessageEvent);
 
                     await initPromise;
@@ -129,7 +184,11 @@ describe('ServiceProxy', () => {
                 mockWindow.addEventListener.calls.reset();
                 await respondToInit({
                     origin: mockUrl,
-                    data: ProxySignal.Listening
+                    data: {
+                        id: undefined,
+                        signal: ProxySignal.Listening,
+                        res: undefined
+                    } as IProxyResponse
                 } as MessageEvent);
 
                 await initPromise;

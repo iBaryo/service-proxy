@@ -14,8 +14,8 @@ export class ServiceProxy {
                 private readonly _win = window) {
     }
 
-    public init(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
+    public init<T>(): Promise<T> {
+        return new Promise<T>((resolve, reject) => {
             this._iframe = this._iframeCreator();
             this._iframe.src = this.url;
             this.getIframeHost().then(host => {
@@ -23,15 +23,29 @@ export class ServiceProxy {
                 this._iframeHost.appendChild(this._iframe);
                 this._win.addEventListener('message', this.onResponse, true);
 
-                // todo: i don't really like this - should refactor
                 const timeoutId = this._win.setTimeout(() => reject('proxy init timeout'), this.timeout);
                 const onInitResponse = (e: MessageEvent) => {
-                    if (this.validateOrigin(e.origin)
-                        && e.data === ProxySignal.Listening) {
-                        this._win.clearTimeout(timeoutId);
-                        this._win.removeEventListener('message', onInitResponse, true);
-                        this._win.addEventListener('message', this.onResponse, true);
-                        resolve();
+                    if (this.validateOrigin(e.origin)) {
+                        const response = e.data as IProxyResponse;
+
+                        if (response.signal) {
+                            this._win.clearTimeout(timeoutId);
+                            this._win.removeEventListener('message', onInitResponse, true);
+
+                            switch (response.signal) {
+                                case ProxySignal.Listening:
+                                    this._win.addEventListener('message', this.onResponse, true);
+                                    resolve(response.res);
+                                    break;
+                                case ProxySignal.Error:
+                                case ProxySignal.StopListening:
+                                    reject(response.res);
+                                    break;
+                                default:
+                                    reject('unsupported response');
+                                    break;
+                            }
+                        }
                     }
                 };
 

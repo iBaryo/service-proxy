@@ -1,4 +1,4 @@
-import {createProxy} from "../index";
+import {createProxy, ServiceProxy} from "../index";
 import {MockService} from "./common";
 
 (async() => {
@@ -10,9 +10,12 @@ import {MockService} from "./common";
 })();
 
 async function testProxy(url : string) {
-    const mockProxy = (await createProxy(url)).wrapWith(MockService);
-    console.log('service proxy created!');
 
+    const proxy = new ServiceProxy(url);
+    const initRes = await proxy.init<{ initial: string }>();
+    console.log(`service proxy created! initial value: ${initRes.initial}`);
+
+    const mockProxy = proxy.wrapWith(MockService);
 
     console.log('invoking method with no params...');
     let result = await mockProxy.mockMethod();

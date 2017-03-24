@@ -14,18 +14,26 @@ export class ProxyListener {
         return this._listening;
     }
 
-    public listen() {
+    public listen(payload? : any) {
         if (!this._listening) {
             this._win.addEventListener('message', this.onRequest, true);
-            this.postMessage(ProxySignal.Listening);
+            this.postMessage({
+                id: undefined,
+                signal: ProxySignal.Listening,
+                res: payload
+            } as IProxyResponse);
             this._listening = true;
         }
     }
 
-    public stopListen() {
+    public stopListen(payload? : any) {
         if (this._listening) {
             this._win.removeEventListener('message', this.onRequest, true);
-            this.postMessage(ProxySignal.StopListening);
+            this.postMessage({
+                id: undefined,
+                signal: ProxySignal.StopListening,
+                res: payload
+            } as IProxyResponse);
             this._listening = false;
         }
     }
