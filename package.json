@@ -6,11 +6,15 @@
   "scripts": {
     "build": "gulp compile",
     "test": "gulp",
+    "prepublish": "npm test",
     "example": "browserify example/main.ts -p [ tsify --project ./tsconfig.json ] -d -o ./example/main.js && browserify example/service.ts -p [ tsify --project ./tsconfig.json ] -d -o ./example/service.js && http-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iBaryo/service-proxy.git"
   },
   "author": "iBaryo",
   "license": "MIT",
-  "dependencies": {},
   "devDependencies": {
     "@types/es6-shim": "^0.31.32",
     "@types/jasmine": "^2.5.38",
