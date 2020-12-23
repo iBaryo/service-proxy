@@ -48,7 +48,7 @@ describe('ServiceProxy', () => {
     it('should initialize', () => expect(proxy).toBeTruthy());
 
     describe('methods', () => {
-        let initPromise: Promise<void>;
+        let initPromise: Promise<any>;
         let respondToInit: (e: MessageEvent & {data: IProxyResponse}) => Promise<void>;
 
         beforeEach(Async(async() => {

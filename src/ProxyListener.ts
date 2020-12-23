@@ -6,8 +6,8 @@ import {isSignalRequest} from "./interfaces";
 export type MaybePromiseAny = any|Promise<any>;
 export type StopCancellers = () => MaybePromiseAny;
 
-export class ProxyListener {
-    constructor(private readonly _service: Object,
+export class ProxyListener<T extends object> {
+    constructor(private readonly _service: T,
                 public readonly origin = getParentUrl(),
                 private readonly _target = window.parent,
                 private readonly _win = window) {
@@ -65,17 +65,10 @@ export class ProxyListener {
                 let res : IProxyResponse;
                 if (!cancel) {
                     this.stopListen();
-                    let payload;
-                    if (this.onStop) {
-                        payload = this.onStop();
-                        if (payload.then) {
-                            payload = await payload;
-                        }
-                    }
                     res = {
                         id: req.id,
                         signal: ProxySignal.StopListening,
-                        res: payload
+                        res: await this.onStop?.()
                     };
                 }
                 else {
@@ -95,11 +88,7 @@ export class ProxyListener {
 
     private async getCancelResult() {
         for (const shouldCancelStop of this.stopCancellers) {
-            let res = shouldCancelStop() as MaybePromiseAny;
-            if (res.then) {
-                res = await res;
-            }
-
+            const res = await shouldCancelStop();
             if (res)
                 return res;
         }
@@ -125,11 +114,7 @@ export class ProxyListener {
 
     private async forwardToService(req: IProxyRequest): Promise<any> {
         const method = this._service[req.methodName] as Function;
-        let result = method.apply(this._service, req.params) as MaybePromiseAny;
-        if (result && result.then) {
-            result = await result;
-        }
-        return result;
+        return await method.apply(this._service, req.params) as MaybePromiseAny;
     }
 
     protected postMessage(msg: any) {

@@ -20,5 +20,5 @@ export const enum ProxySignal {
 }
 
 export function isSignalRequest(req : IProxyMessage) : req is IProxySignalRequest {
-    return Boolean((req as IProxySignalRequest).signal);
+    return 'signal' in req;
 }

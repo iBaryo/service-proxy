@@ -4,7 +4,7 @@ import {ProxySignal, IProxyRequest, IProxyResponse, IProxyMessage, IProxySignalR
 export class ServiceProxy {
     private _iframe: HTMLIFrameElement;
     private _iframeHost: HTMLElement;
-    private _pendingReqs: ((e: MessageEvent & {data: IProxyResponse})=>void)[] = [];
+    private _pendingReqs: ((e: MessageEvent & { data: IProxyResponse }) => void)[] = [];
 
     constructor(public readonly url: string,
                 public readonly timeout = 5000,
@@ -20,7 +20,7 @@ export class ServiceProxy {
 
     public init<T>(): Promise<T> {
         if (this.isInit)
-            return Promise.reject('proxy already initialized') as any;
+            return Promise.reject('proxy already initialized');
         else
             return new Promise<T>((resolve, reject) => {
                 this._iframe = this._iframeCreator();
@@ -65,7 +65,7 @@ export class ServiceProxy {
         return validateOrigin(this._iframe.src, checked);
     }
 
-    private onResponse = (e: MessageEvent & {data: IProxyResponse}) => { // arrow function to preserve context
+    private onResponse = (e: MessageEvent & { data: IProxyResponse }) => { // arrow function to preserve context
         const msg = e.data;
         if (this.validateOrigin(e.origin) && msg && this._pendingReqs[msg.id]) {
             this._pendingReqs[msg.id](msg);
@@ -90,8 +90,7 @@ export class ServiceProxy {
                 this._win.clearTimeout(timeoutId);
                 if (e.signal === ProxySignal.Error) {
                     reject(e.res);
-                }
-                else {
+                } else {
                     resolve(e.res);
                 }
             };
@@ -106,11 +105,10 @@ export class ServiceProxy {
         } as IProxyRequest);
     }
 
-    public async stop<T>(forceClose = false) : Promise<T> {
+    public async stop<T>(forceClose = false): Promise<T> {
         if (!this.isInit) {
             throw 'proxy is not active';
-        }
-        else {
+        } else {
             let error;
 
             try {
@@ -118,12 +116,10 @@ export class ServiceProxy {
                     id: this._idCreator(),
                     signal: ProxySignal.StopListening
                 } as IProxySignalRequest);
-            }
-            catch (e) {
+            } catch (e) {
                 error = e;
                 throw e;
-            }
-            finally {
+            } finally {
                 if (!error || forceClose) {
                     this._win.removeEventListener('message', this.onResponse, true);
                     this._iframeHost.removeChild(this._iframe);
@@ -136,10 +132,10 @@ export class ServiceProxy {
     public wrapWith<T>(type: new() => T): T;
     public wrapWith<T>(type: Object): T;
     public wrapWith<T>(keys: string[]): T;
-    public wrapWith<T>(type: (new() => T)|Object|string[]): T {
+    public wrapWith<T>(type: (new() => T) | Object | string[]): T {
         let keys: string[];
         if (typeof type === 'function')
-            keys = getAllClassMethodsNames(type);
+            keys = getAllClassMethodsNames(type as (new() => T));
         else if (type instanceof Array)
             keys = type;
         else if (typeof type === 'object')

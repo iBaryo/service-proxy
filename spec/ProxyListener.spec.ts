@@ -6,14 +6,14 @@ import Spy = jasmine.Spy;
 
 describe('ProxyListener', () => {
     class MockService {
-        public mockMethod() {
+        public mockMethod(param1, param2): any {
         }
     }
     let mockService: MockService;
     let mockOrigin: string;
     let mockTarget;
     let mockWindow;
-    let listener: ProxyListener;
+    let listener: ProxyListener<MockService>;
 
     beforeEach(() => {
         mockService = new MockService();
@@ -56,7 +56,7 @@ describe('ProxyListener', () => {
     });
 
     describe('on message', () => {
-        const methodName = 'mockMethod';
+        const methodName = 'mockMethod' as const;
 
         let sendMsg: (e: MessageEvent) => Promise<any>;
         let mockId: string;
@@ -251,9 +251,9 @@ describe('ProxyListener', () => {
             it('should forward request to service with parameters', Async(async() => {
                 const param1 = {};
                 const param2 = {};
-                spyOn(mockService, methodName).and.callFake((param1, param2) => {
-                    expect(param1).toBeTruthy();
-                    expect(param2).toBeTruthy();
+                spyOn(mockService, methodName).and.callFake(async (p1, p2) => {
+                    expect(p1).toBeTruthy();
+                    expect(p2).toBeTruthy();
                 });
                 await sendMsg({
                     origin: mockOrigin,

@@ -4,8 +4,8 @@
   "description": "Create a proxy for a service instance that exists in a different page.",
   "main": "index.js",
   "scripts": {
-    "build": "gulp compile",
-    "test": "gulp",
+    "build": "tsc",
+    "test": "tsc && jasmine spec/*.js",
     "prepublish": "npm test",
     "example": "browserify example/main.ts -p [ tsify --project ./tsconfig.json ] -d -o ./example/main.js && browserify example/service.ts -p [ tsify --project ./tsconfig.json ] -d -o ./example/service.js && http-server"
   },
@@ -16,15 +16,11 @@
   "author": "iBaryo",
   "license": "MIT",
   "devDependencies": {
-    "@types/es6-shim": "^0.31.32",
-    "@types/jasmine": "^2.5.38",
-    "@types/node": "^6.0.48",
-    "browserify": "^14.0.0",
-    "gulp": "^3.9.1",
-    "gulp-jasmine": "^2.4.2",
-    "gulp-tsc": "^1.2.6",
-    "run-sequence": "^1.2.2",
-    "tsify": "^3.0.1",
-    "typescript": "^2.1.4"
+    "@types/jasmine": "^3.6.2",
+    "browserify": "^17.0.0",
+    "http-server": "^0.12.3",
+    "jasmine": "^3.6.3",
+    "tsify": "^5.0.2",
+    "typescript": "^4.1.3"
   }
 }
